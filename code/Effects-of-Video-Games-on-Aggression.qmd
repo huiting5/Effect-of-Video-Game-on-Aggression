@@ -1,0 +1,284 @@
+---
+format: pdf
+---
+
+
+```{r}
+library(dplyr)
+library(stringr)
+library(car)
+library(phia)
+library(knitr)
+library(ggplot2)
+library(emmeans)
+```
+
+### Import Data
+
+```{r}
+game <- read.csv("Effects of Violent Video Games On Aggression CSV MSDOS.csv", stringsAsFactors = F)
+```
+
+### Data cleaning
+
+-   Rename the variable names
+
+```{r}
+fgame <- game |>
+  mutate(across(where(is.character), as.factor)) |>
+  rename(age = What.is.your.age.,
+         family_type = Type.of.Family,
+         fav_game = Name.the.video.game.you.usually.play,
+         violent_game_hr = How.much.time.do.you.play..violent..video.games.specifically.,
+         city = City..Residencial.status, 
+         game_type = What.type.of.video.games.do.you.typically.play.,
+         behavioral_chng = What.changes.on.behaviour.have.you.experienced.in.yourself.after.playing.violent.video.games., 
+         hot_head = Some.of.my.Friends.think.I.am.hothead,
+         hours_of_playing = How.many.hours.do.you.play.Video.Games.in..a.day.,
+         violence = If.I.have.to.resort.to.violence.to.protect.my.rights..I.will,
+         self_doubt = When.people.are.especially.nice.to.me..I.wonder.what.they.want,
+         conflict = I.tell.my.friends.openly.when.I.disagree.with.them,
+         mad = Once.I.became.so.mad..I.broke.things,
+         argue = When.people.disagree.with.me.I.get.into.arguments, 
+         abusive = When.I.argue.I.use.abusive.language,
+         hot_temper = I.am.a.hot.tempered.person,
+         suspicious = I.am.suspicious.of.strangers.who.are.too.friendly,
+         threaten = I.have.threatened.some.people.whom.I.know,
+         anger = I.can.get.angry.suddenly.but.get.over.it.quickly,
+         hit = If.I.am.provoked.enough..I.will.hit.another.person, 
+         no_fear = When.people.annoy.me..I.openly.tell.them.what.I.think.of.them,
+         hit_noreason = I.may.hit.a.person.for.no.good.reason,
+         unfair = Sometimes.I.feel.I.am.being.treated.unfairly,
+         control = I.have.trouble.controlling.my.temper,
+         irritate = When.frustrated..I.show.my.irritation,
+         laugh = Sometimes.I.feel.people.are.laughing.behind.my.back,
+         disagree= I.often.disagree.with.people,
+         hit_back = If.somebody.hits.me..I.hit.back,
+         explode = I.sometimes.feel.like.exploding.for.no.good.reason,
+         opportunity = I.feel.other.people.always.take.over.the.oppurtunity.and.I.miss.it,
+         fight= there.are.people.who.pushed.me.so.far.that.we.begin.fighting,
+         talk_back = I.know.that.some.so.called..friends..talk.about.me.behind.my.back,
+         argumentive = My.friends.say.that.I.am.a.bit.argumentative,
+         lose_temp = Sometimes.I.lose.temper.for.no.good.reason,
+         fighter = I.get.into.fights.a.little.more.than.a.normal.person,
+         urge_to_hit = sometimes.I.can.not.control.the.feeling.to.hit.another.person,
+         jealous = I.sometimes.get.too.much.jealous.from.people,
+         bitter = I.dont.know.why.sometimes.I.feel.bitter.about.things,
+         deli_behave = Have.you.ever.been.involved.in.delinquent.behaviour..like.stealing..breaking.things.of.others,
+         impact_of_play = Do.you.believe.that.playing.violent.video.games.can.lead.to.aggressive.behavior.in.real.life.
+)  
+```
+
+-   Convert the answers into likert scores
+
+```{r}
+likert_cols <- c("violence","self_doubt","conflict","mad","argue","abusive","hot_temper",
+                 "suspicious","threaten","anger","hit","no_fear","hit_noreason","unfair","control","irritate",
+                 "laugh","disagree","hit_back","explode","opportunity","fight","talk_back",
+                 "argumentive","lose_temp","fighter","urge_to_hit","jealous","bitter")
+
+likert_scale <- c("Strongly disagree" = 1,
+                  "Disagree" = 2,
+                  "Neither agree nor disagree" = 3,
+                  "Strongly agree" =  4,
+                  "Agree" = 5)
+
+fgame$hot_head <- likert_scale[fgame$hot_head]
+
+
+for (col in likert_cols){
+  if (col %in% names(fgame)) {
+    cleaned_values <- trimws(fgame[[col]])
+    converted <- likert_scale[cleaned_values]
+    if(length(converted) == nrow(fgame)) {
+      fgame[[col]] <- converted
+    }
+    else 
+      warning(paste("Conversion Failed: ", col))
+  }
+}
+
+likert_cols_null <- c("urge_to_hit","jealous","bitter")
+
+likert_scale_null <- c("Strongly disagree" = 1,
+                  "Disagree" = 2,
+                  "Neither agree nor disagree" = 3,
+                  "Strongly agree" =  4,
+                  "Agree" = 5)
+
+fgame$urge_to_hit <- likert_scale_null[fgame$urge_to_hit]
+fgame$jealous <- likert_scale_null[fgame$jealous]
+fgame$bitter <- likert_scale_null[fgame$bitter]
+
+# Due with the missing values
+
+fgame[likert_cols_null] <- lapply(fgame[likert_cols_null], function(x){
+                          x[is.na(x)] <- 0
+                          return(x)
+})
+
+likert_cols_hour <- c(fgame$hours_of_playing,fgame$violent_game_hr)
+likert_scale_hour <- c("less than 1 hour" = 1,
+                       "more than 1 hour" = 2,
+                       "more than 2 hour" = 3,
+                       "more than 3 hour" = 4,
+                       "more than 5 hour" = 5)
+
+fgame$hours_of_playing <- likert_scale_hour[fgame$hours_of_playing]
+fgame$violent_game_hr <- likert_scale_hour[fgame$violent_game_hr]
+
+fgame$BPAQ_score <- rowSums(fgame[likert_cols], na.rm = T)
+
+# group the game type and age group
+fgame <- fgame %>% mutate(ftype = case_when(
+  game_type == "action" ~ "action",
+  game_type == "fighting" ~ "fighting",
+  TRUE ~ "others"
+)) %>% mutate(
+    age_chr = as.character(age),
+    age_numeric = str_extract_all(age_chr, "\\d+") %>%
+                  lapply(as.numeric) %>%
+                  sapply(function(x) max(x, na.rm = TRUE)),
+    age_group = case_when(
+      age_numeric < 18 ~ "younger than 18",
+      age_numeric %in% c(18, 19) ~ "18 and 19",
+      age_numeric > 19  ~ "older than 19")) %>% 
+  select(-age_numeric, -age_chr)
+
+fgame$fhrs_playing <- as.factor(fgame$hours_of_playing)
+levels(fgame$fhrs_playing)
+levels(fgame$age_group)
+```
+
+### Visualization
+
+```{r}
+fgame %>% ggplot(aes(x = BPAQ_score, fill = age_group)) + 
+  geom_histogram() + 
+  scale_fill_manual(values=c("#999999", "#E69F00", "#56B4E9")) +
+  labs(x = "BPAQ Score",
+       y = "Frequency",
+       fill = "Age Group",
+       title = "Distribution of BPAQ Score Across Different Age Group")
+
+fgame %>% ggplot(aes(x = BPAQ_score, fill = age_group)) + 
+  geom_boxplot() + 
+  scale_fill_manual(values=c("#999999", "#E69F00", "#56B4E9")) +
+  labs(x = "BPAQ Score",
+       y = "Frequency",
+       fill = "Age Group",
+       title = "Distribution of BPAQ Score Across Different Age Group")
+```
+
+```{r}
+fgame %>% 
+  ggplot(aes(x = BPAQ_score, fill = fhrs_playing)) + 
+  geom_histogram() +
+  scale_fill_manual(values = c("#999999", "#E69F00", "#56B4E9", "#009E73", "#F0E442")) +
+  labs(
+    x = "BPAQ Score",
+    y = "Frequency",
+    fill = "Hours Of Playing",
+    title = "Distribution of BPAQ Score Across Different Hours of Playing"
+  )
+
+fgame %>% 
+  ggplot(aes(x = BPAQ_score, fill = fhrs_playing)) + 
+  geom_boxplot() +
+  scale_fill_manual(values = c("#999999", "#E69F00", "#56B4E9", "#009E73", "#F0E442")) +
+  labs(
+    x = "BPAQ Score",
+    y = "Frequency",
+    fill = "Hours Of Playing",
+    title = "Distribution of BPAQ Score Across Different Hours of Playing"
+  )
+```
+
+
+### Check Balance
+
+```{r}
+fgame %>% group_by(age_group, hours_of_playing) %>% count()
+```
+
+### Interaction Plot
+
+```{r}
+with(fgame, interaction.plot(trace.factor = age_group, 
+                             x.factor = hours_of_playing, 
+                             response = BPAQ_score, type = "b",
+                             xlab = "Hours Of Playing",
+                             ylab = "Mean BPAQ Score",
+                             trace.label = "Age Group" ))
+
+fit1 <- aov(BPAQ_score ~ as.factor(age_group)*fhrs_playing, data = fgame)
+summary(fit1) 
+plot(interactionMeans(fit1))
+
+
+ggplot(fgame, aes(x=age_group, y = BPAQ_score, color= fhrs_playing, group = fhrs_playing)) +
+  stat_summary(fun = mean, geom = "line" , size = 1.2) +
+  stat_summary(fun = mean, geom = "point" , size = 3) +
+  labs (title = "Interaction Plot of BPAQ Score by Age group 
+        and Hours of Playing",
+        x =  "Age Group",
+        y = "BPAQ Score",
+        color= "Hours of Playing in a day") +
+  theme_minimal()
+```
+
+### ANOVA Table
+
+```{r}
+# test for main effects
+main <- lm(BPAQ_score ~ age_group + fhrs_playing, data = fgame)
+Anova(main)
+
+# test for interaction effect
+model <- lm(BPAQ_score ~ age_group*fhrs_playing, data = fgame)
+Anova(model)
+```
+
+### Check Assumptions
+
+```{r}
+# interaction effect models
+par(mfrow = c(1,2))
+plot(model, 1:2)
+```
+
+```{r}
+leveneTest(BPAQ_score~ age_group* fhrs_playing, data = fgame)
+shapiro.test(resid(model))
+```
+
+```{r}
+# main effects model
+par(mfrow = c(1,2))
+plot(main, 1:2)
+```
+
+```{r}
+# Test for age_group
+leveneTest(BPAQ_score ~ age_group, data = fgame)
+
+# Test for fhrs_playing
+leveneTest(BPAQ_score ~ fhrs_playing, data = fgame)
+
+# normality
+shapiro.test(resid(main))
+```
+
+
+### Pairwise Post-hoc Tests
+
+```{r}
+emmeans(model, pairwise ~ age_group | fhrs_playing)$contrasts
+```
+
+### Visualization of results
+
+```{r fig.height= 8}
+plot(emmeans(model, 
+             pairwise ~ age_group | fhrs_playing)$contrasts)
+```
