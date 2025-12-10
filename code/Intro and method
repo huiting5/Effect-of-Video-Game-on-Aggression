@@ -1,0 +1,32 @@
+Numerous studies have examined the connection between playing violent video games and
+acting aggressively, particularly in regard to young people’s increased video game consumption.
+While some studies believe that playing violent video games might be a harmless way to
+relieve stress, others claim that it can actually increase violence. This dataset was collected
+in Pakistan in order to study the relationship between gamers’ interactions with video games
+and how such interactions affect their aggressive behavior. The purpose of this analysis is to
+find trends or correlations that can provide insight into whether playing violent video games
+is a good indicator of violence. Our analysis’s research question is: Do age groups and video
+game playing time have an impact on a player’s level of aggression? The study we conducted
+is based on the hypothesis 𝐻0 ∶ Age groups and the amount of time spent playing video games
+do not significantly affect BPAQ scores. 𝐻0 ∶ 𝛼𝛽11 = 𝛼𝛽12 = ⋅ ⋅ ⋅ = 𝛼𝛽35 = 0. 𝐻1 ∶ Age groups
+and the amount of time spent playing video games have a substantial impact on BPAQ scores.
+𝐻1 ∶ 𝛼𝛽𝑖𝑗 ≠ 0 where i (age_group) = 1,2,3 and j (hours_of_playing) = 1,2,3,4,5
+
+This dataset includes a total of 147 observations and 43 variables out of which 1 variable is for
+timestamp, 5 questions are the background questions including name, age, gender, city, type
+of family (nuclear,joint), favorite type of game, favorite game, Hours spent on playing and 33
+other behavioral questions. The questions were answered in the format of likert scale (“Strongly
+disagree”,“Disagree”,“Neither agree nor disagree”,“Strongly agree”,“Agree”) so they were con-
+verted into numeric value of (“1”,“2”,“3”,“4”,“5”) and hours of playing were initially answered
+as (“less than 1 hour”,“more than 1 hour”,“more than 2 hour”,“more than 3 hour”,“more than
+5 hour”) and they were converted into numeric value of (“1”,“2”,“3”,“4”,“5”). A new variable
+was added in dataset names as BPAQ Score and it stores the total count of questions that were
+answered. The higher number shows the higher effect on behavior (aggression) after playing
+video games. The dataset analyzes the correlation between video game play and aggression
+in people between the ages of 15 and 32. The main goal is to determine whether aggression
+scores are affected by age group and video game playing hours. Once preprocessing has been
+completed (data cleaning, encoding, BPAQ score), the analysis was further proceeded by data
+visualizations (box plots and histograms for hours of playing and age groups, interaction plot)
+, two-way ANOVA for fixed effects (for interaction between age groups and hours of playing,
+assumptions checked (plots, leveneTest and Shapiro-Wilk Test) and then Post-Hoc Analysis
+(Tukey pairwise comparisons).
